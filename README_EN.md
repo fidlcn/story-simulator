@@ -11,9 +11,24 @@ Run a sandbox world, let AI characters act autonomously, create conflicts, and d
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![OpenAI Compatible](https://img.shields.io/badge/LLM-OpenAI_Compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
 
-[中文](./README.md) · [Design Docs](doc/) · [API Docs](http://localhost:8000/api/docs)
+[中文](./README.md)
 
 </div>
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center">Project Overview</td>
+    <td align="center">Simulation Console</td>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/overview.jpg" alt="Project Overview" width="480" /></td>
+    <td><img src="./screenshots/simulation.jpg" alt="Simulation Console" width="480" /></td>
+  </tr>
+</table>
 
 ---
 

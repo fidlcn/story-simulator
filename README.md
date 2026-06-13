@@ -11,9 +11,24 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![OpenAI Compatible](https://img.shields.io/badge/LLM-OpenAI_Compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
 
-[English](./README_EN.md) · [设计文档](doc/) · [API 文档](http://localhost:8000/api/docs)
+[English](./README_EN.md)
 
 </div>
+
+---
+
+## 📸 预览
+
+<table>
+  <tr>
+    <td align="center">项目概览</td>
+    <td align="center">模拟控制台</td>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/overview.jpg" alt="项目概览" width="480" /></td>
+    <td><img src="./screenshots/simulation.jpg" alt="模拟控制台" width="480" /></td>
+  </tr>
+</table>
 
 ---
 
