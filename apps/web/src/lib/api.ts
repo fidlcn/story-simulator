@@ -157,9 +157,21 @@ export const simulationApi = {
     request<{ status: string }>(`/api/simulations/${id}/pause`, { method: 'POST' }),
   resume: (id: string) =>
     request<{ status: string }>(`/api/simulations/${id}/resume`, { method: 'POST' }),
-  getEvents: (id: string, pageSize?: number) =>
-    request<{ total: number; events: SimEvent[] }>(`/api/simulations/${id}/events${pageSize ? `?page_size=${pageSize}` : ''}`),
-  getTimeline: (id: string) => request<{ ticks: Array<{ tick: number; events: SimEvent[] }> }>(`/api/simulations/${id}/timeline`),
+  getEvents: (id: string, pageSize?: number, page = 1, participantId?: string) => {
+    const params = new URLSearchParams()
+    params.set('page', String(page))
+    if (pageSize) params.set('page_size', String(pageSize))
+    if (participantId) params.set('participant_id', participantId)
+    return request<{ total: number; events: SimEvent[] }>(`/api/simulations/${id}/events?${params}`)
+  },
+  getTimeline: (id: string, opts?: { fromTick?: number; toTick?: number; limit?: number }) => {
+    const params = new URLSearchParams()
+    if (opts?.fromTick !== undefined) params.set('from_tick', String(opts.fromTick))
+    if (opts?.toTick !== undefined) params.set('to_tick', String(opts.toTick))
+    if (opts?.limit !== undefined) params.set('limit', String(opts.limit))
+    const query = params.toString()
+    return request<{ ticks: Array<{ tick: number; events: SimEvent[] }> }>(`/api/simulations/${id}/timeline${query ? `?${query}` : ''}`)
+  },
 }
 
 // --- Narrative API ---

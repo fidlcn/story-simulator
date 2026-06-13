@@ -1,7 +1,7 @@
 """World and WorldFact models."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -49,6 +49,7 @@ class WorldFact(Base):
         CheckConstraint("scope IN ('global','regional','faction','character','local')", name="ck_world_fact_scope"),
         CheckConstraint("status IN ('draft','locked','hidden')", name="ck_world_fact_status"),
         CheckConstraint("source IN ('user','ai','simulation')", name="ck_world_fact_source"),
+        Index("ix_world_facts_world_status_scope", "world_id", "status", "scope"),
     )
 
     world = relationship("World", back_populates="facts")

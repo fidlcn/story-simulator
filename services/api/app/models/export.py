@@ -1,7 +1,7 @@
 """Export and AgentRun models."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
@@ -27,6 +27,8 @@ class Export(Base):
         CheckConstraint("export_type IN ('outline','beat_sheet','screenplay','timeline')", name="ck_export_type"),
         CheckConstraint("format IN ('markdown','fountain','docx','pdf')", name="ck_export_format"),
         CheckConstraint("status IN ('pending','generating','completed','failed')", name="ck_export_status"),
+        Index("ix_exports_sim_created", "simulation_id", "created_at"),
+        Index("ix_exports_lens", "lens_id"),
     )
 
 
@@ -49,4 +51,6 @@ class AgentRun(Base):
 
     __table_args__ = (
         CheckConstraint("status IN ('running','completed','failed','timeout')", name="ck_agent_run_status"),
+        Index("ix_agent_runs_sim_created", "simulation_id", "created_at"),
+        Index("ix_agent_runs_status_created", "status", "created_at"),
     )

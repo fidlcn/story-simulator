@@ -28,7 +28,8 @@ async def health_check():
 
 
 # Register routers
-from app.routers import projects, worlds, characters, simulations, variables, narratives, exports, settings  # noqa: E402
+from app.routers import projects, worlds, characters, simulations, variables, narratives, exports  # noqa: E402
+from app.routers import settings as settings_router  # noqa: E402
 
 app.include_router(projects.router, prefix="/api", tags=["projects"])
 app.include_router(worlds.router, prefix="/api", tags=["worlds"])
@@ -37,4 +38,4 @@ app.include_router(simulations.router, prefix="/api", tags=["simulations"])
 app.include_router(variables.router, prefix="/api", tags=["variables"])
 app.include_router(narratives.router, prefix="/api", tags=["narratives"])
 app.include_router(exports.router, prefix="/api", tags=["exports"])
-app.include_router(settings.router, prefix="/api", tags=["settings"])
+app.include_router(settings_router.router, prefix="/api", tags=["settings"])

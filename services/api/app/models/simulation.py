@@ -1,7 +1,7 @@
 """Simulation, SimulationEvent, VariableInjection, Snapshot, Faction models."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey, CheckConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -23,6 +23,8 @@ class Simulation(Base):
 
     __table_args__ = (
         CheckConstraint("status IN ('draft','running','paused','completed','failed')", name="ck_sim_status"),
+        Index("ix_simulations_project_created", "project_id", "created_at"),
+        Index("ix_simulations_parent", "parent_simulation_id"),
     )
 
     project = relationship("Project", back_populates="simulations", foreign_keys="[Simulation.project_id]")
@@ -62,6 +64,9 @@ class SimulationEvent(Base):
         ),
         CheckConstraint("locked = TRUE", name="ck_event_locked"),
         CheckConstraint("created_by IN ('user','agent','system')", name="ck_event_created_by"),
+        Index("ix_events_sim_tick_created", "simulation_id", "tick", "created_at"),
+        Index("ix_events_sim_type_tick", "simulation_id", "event_type", "tick"),
+        Index("ix_events_participants_gin", "participants", postgresql_using="gin"),
     )
 
     simulation = relationship("Simulation", back_populates="events")
@@ -90,6 +95,7 @@ class VariableInjection(Base):
         ),
         CheckConstraint("created_by IN ('user','ai')", name="ck_variable_created_by"),
         CheckConstraint("status IN ('pending','accepted','rejected','applied')", name="ck_variable_status"),
+        Index("ix_variables_sim_status", "simulation_id", "status"),
     )
 
     simulation = relationship("Simulation", back_populates="variables")
@@ -107,6 +113,7 @@ class Snapshot(Base):
 
     __table_args__ = (
         CheckConstraint("snapshot_type IN ('full','characters','world','relationships')", name="ck_snapshot_type"),
+        Index("ix_snapshots_sim_tick", "simulation_id", "tick"),
     )
 
     simulation = relationship("Simulation", back_populates="snapshots")

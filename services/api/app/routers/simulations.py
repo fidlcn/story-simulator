@@ -1,7 +1,7 @@
 """Simulations router — simulation control and event queries."""
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
@@ -154,8 +154,8 @@ async def list_events(
     tick: int | None = None,
     event_type: str | None = None,
     participant_id: uuid.UUID | None = None,
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=2000),
     db: AsyncSession = Depends(get_db),
 ):
     base_q = select(SimulationEvent).where(SimulationEvent.simulation_id == simulation_id)
@@ -163,6 +163,8 @@ async def list_events(
         base_q = base_q.where(SimulationEvent.tick == tick)
     if event_type:
         base_q = base_q.where(SimulationEvent.event_type == event_type)
+    if participant_id:
+        base_q = base_q.where(SimulationEvent.participants.contains([str(participant_id)]))
 
     # Count total
     from sqlalchemy import func
@@ -177,13 +179,20 @@ async def list_events(
 
 
 @router.get("/simulations/{simulation_id}/timeline")
-async def get_timeline(simulation_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Get full timeline grouped by tick."""
-    q = (
-        select(SimulationEvent)
-        .where(SimulationEvent.simulation_id == simulation_id)
-        .order_by(SimulationEvent.tick, SimulationEvent.created_at)
-    )
+async def get_timeline(
+    simulation_id: uuid.UUID,
+    from_tick: int | None = Query(None, ge=0),
+    to_tick: int | None = Query(None, ge=0),
+    limit: int = Query(500, ge=1, le=2000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get timeline grouped by tick, bounded for long-running simulations."""
+    q = select(SimulationEvent).where(SimulationEvent.simulation_id == simulation_id)
+    if from_tick is not None:
+        q = q.where(SimulationEvent.tick >= from_tick)
+    if to_tick is not None:
+        q = q.where(SimulationEvent.tick <= to_tick)
+    q = q.order_by(SimulationEvent.tick, SimulationEvent.created_at).limit(limit)
     events = (await db.execute(q)).scalars().all()
 
     # Group by tick
@@ -196,9 +205,20 @@ async def get_timeline(simulation_id: uuid.UUID, db: AsyncSession = Depends(get_
 
 
 @router.get("/simulations/{simulation_id}/graph")
-async def get_graph(simulation_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Get causal graph data (nodes + edges)."""
+async def get_graph(
+    simulation_id: uuid.UUID,
+    from_tick: int | None = Query(None, ge=0),
+    to_tick: int | None = Query(None, ge=0),
+    limit: int = Query(500, ge=1, le=2000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get bounded causal graph data (nodes + edges)."""
     q = select(SimulationEvent).where(SimulationEvent.simulation_id == simulation_id)
+    if from_tick is not None:
+        q = q.where(SimulationEvent.tick >= from_tick)
+    if to_tick is not None:
+        q = q.where(SimulationEvent.tick <= to_tick)
+    q = q.order_by(SimulationEvent.tick, SimulationEvent.created_at).limit(limit)
     events = (await db.execute(q)).scalars().all()
 
     nodes = []

@@ -1,7 +1,7 @@
 """Character, CharacterResource, Relationship, CharacterKnowledge, CharacterSecret, CharacterArcState models."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, SmallInteger, Boolean, DateTime, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import String, Text, Integer, SmallInteger, Boolean, DateTime, ForeignKey, CheckConstraint, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB, NUMERIC
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -9,6 +9,9 @@ from app.core.database import Base
 
 class Character(Base):
     __tablename__ = "characters"
+    __table_args__ = (
+        Index("ix_characters_project_active", "project_id", "active"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
@@ -56,6 +59,9 @@ class Relationship(Base):
     __tablename__ = "relationships"
     __table_args__ = (
         UniqueConstraint("character_id_a", "character_id_b", name="uq_relationship_pair"),
+        Index("ix_relationships_project", "project_id"),
+        Index("ix_relationships_char_a", "character_id_a"),
+        Index("ix_relationships_char_b", "character_id_b"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -90,6 +96,7 @@ class CharacterKnowledge(Base):
 
     __table_args__ = (
         CheckConstraint("knowledge_type IN ('fact','belief','rumor','misunderstanding')", name="ck_knowledge_type"),
+        Index("ix_knowledge_character_sim", "character_id", "simulation_id"),
     )
 
     character = relationship("Character", back_populates="knowledge_items")
@@ -111,11 +118,16 @@ class CharacterSecret(Base):
 
     character = relationship("Character", back_populates="secrets")
 
+    __table_args__ = (
+        Index("ix_secrets_character_sim_revealed", "character_id", "simulation_id", "revealed"),
+    )
+
 
 class CharacterArcState(Base):
     __tablename__ = "character_arc_states"
     __table_args__ = (
         UniqueConstraint("character_id", "simulation_id", name="uq_arc_state"),
+        Index("ix_arc_states_simulation", "simulation_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

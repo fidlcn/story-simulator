@@ -1,14 +1,13 @@
 """Context Builder — builds visible contexts for each agent."""
 import uuid
 import logging
-from typing import Optional
+from collections import defaultdict
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from app.models.world import World, WorldFact
 from app.models.character import Character, CharacterKnowledge, CharacterSecret, Relationship
 from app.models.simulation import Simulation, SimulationEvent, VariableInjection
-from app.models.memory import Memory
 
 logger = logging.getLogger(__name__)
 
@@ -19,47 +18,29 @@ class ContextBuilder:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def build_character_context(
+    def _build_context(
         self,
-        character_id: uuid.UUID,
-        simulation_id: uuid.UUID,
+        character: Character,
+        world_facts: list[WorldFact],
+        recent_events: list[SimulationEvent],
+        knowledge: list[CharacterKnowledge],
+        secrets: list[CharacterSecret],
+        relationships: list[Relationship],
+        characters_by_id: dict[uuid.UUID, Character],
+        variables: list[VariableInjection],
     ) -> dict:
-        """
-        Build the visible context for a character agent.
+        character_id = character.id
+        character_id_str = str(character_id)
+        visible_facts = [f.text for f in world_facts if f.status == "locked" or f.scope == "global"]
 
-        CRITICAL: Only includes information the character knows.
-        - Public world facts + facts known to this character
-        - Events where character is a participant AND visibility = known/suspected
-        - Character's own knowledge, beliefs, misunderstandings
-        - Character's secrets
-        - Character's relationships
-        - Active variables affecting this character
-        """
-        character = await self.db.get(Character, character_id)
-
-        # World facts visible to this character (public + known hidden)
-        facts_q = select(WorldFact).where(
-            WorldFact.status.in_(["locked", "draft"]),
-        )
-        all_facts = (await self.db.execute(facts_q)).scalars().all()
-        visible_facts = [f.text for f in all_facts if f.status == "locked" or f.scope == "global"]
-
-        # Events known to this character
-        events_q = (
-            select(SimulationEvent)
-            .where(SimulationEvent.simulation_id == simulation_id)
-            .order_by(SimulationEvent.tick.desc())
-            .limit(20)
-        )
-        all_events = (await self.db.execute(events_q)).scalars().all()
         known_events = []
-        for event in all_events:
+        for event in recent_events:
             vis = event.visibility or []
             is_known = any(
-                v.get("characterId") == str(character_id) and v.get("visibility") in ("known", "suspected")
+                v.get("characterId") == character_id_str and v.get("visibility") in ("known", "suspected")
                 for v in vis
             )
-            if is_known or str(character_id) in [str(p) for p in (event.participants or [])]:
+            if is_known or character_id_str in [str(p) for p in (event.participants or [])]:
                 known_events.append({
                     "tick": event.tick,
                     "title": event.title,
@@ -67,30 +48,10 @@ class ContextBuilder:
                     "event_type": event.event_type,
                 })
 
-        # Character knowledge
-        knowledge_q = select(CharacterKnowledge).where(
-            CharacterKnowledge.character_id == character_id,
-            CharacterKnowledge.simulation_id == simulation_id,
-        )
-        knowledge = (await self.db.execute(knowledge_q)).scalars().all()
-
-        # Character secrets
-        secrets_q = select(CharacterSecret).where(
-            CharacterSecret.character_id == character_id,
-            CharacterSecret.simulation_id == simulation_id,
-            CharacterSecret.revealed == False,
-        )
-        secrets = (await self.db.execute(secrets_q)).scalars().all()
-
-        # Relationships
-        rel_q = select(Relationship).where(
-            (Relationship.character_id_a == character_id) | (Relationship.character_id_b == character_id),
-        )
-        relationships = (await self.db.execute(rel_q)).scalars().all()
         rel_data = []
         for r in relationships:
             other_id = r.character_id_b if r.character_id_a == character_id else r.character_id_a
-            other_char = await self.db.get(Character, other_id)
+            other_char = characters_by_id.get(other_id)
             rel_data.append({
                 "character_id": str(other_id),
                 "name": other_char.name if other_char else "Unknown",
@@ -99,15 +60,9 @@ class ContextBuilder:
                 "trust": r.trust,
             })
 
-        # Active variables
-        var_q = select(VariableInjection).where(
-            VariableInjection.simulation_id == simulation_id,
-            VariableInjection.status == "applied",
-        )
-        variables = (await self.db.execute(var_q)).scalars().all()
         active_vars = [
             v.description for v in variables
-            if str(character_id) in [str(eid) for eid in (v.affected_entity_ids or [])]
+            if character_id_str in [str(eid) for eid in (v.affected_entity_ids or [])]
         ]
 
         return {
@@ -132,6 +87,95 @@ class ContextBuilder:
             "active_variables": active_vars,
         }
 
+    async def build_character_context(
+        self,
+        character_id: uuid.UUID,
+        simulation_id: uuid.UUID,
+    ) -> dict:
+        """
+        Build the visible context for a character agent.
+
+        CRITICAL: Only includes information the character knows.
+        - Public world facts + facts known to this character
+        - Events where character is a participant AND visibility = known/suspected
+        - Character's own knowledge, beliefs, misunderstandings
+        - Character's secrets
+        - Character's relationships
+        - Active variables affecting this character
+        """
+        character = await self.db.get(Character, character_id)
+        sim = await self.db.get(Simulation, simulation_id)
+        if not character or not sim:
+            return {}
+
+        # World facts visible to this character (public + known hidden)
+        facts_q = (
+            select(WorldFact)
+            .join(World)
+            .where(
+                World.project_id == sim.project_id,
+                WorldFact.status.in_(["locked", "draft"]),
+            )
+        )
+        all_facts = (await self.db.execute(facts_q)).scalars().all()
+
+        # Events known to this character
+        events_q = (
+            select(SimulationEvent)
+            .where(SimulationEvent.simulation_id == simulation_id)
+            .order_by(SimulationEvent.tick.desc())
+            .limit(20)
+        )
+        all_events = (await self.db.execute(events_q)).scalars().all()
+
+        # Character knowledge
+        knowledge_q = select(CharacterKnowledge).where(
+            CharacterKnowledge.character_id == character_id,
+            CharacterKnowledge.simulation_id == simulation_id,
+        )
+        knowledge = (await self.db.execute(knowledge_q)).scalars().all()
+
+        # Character secrets
+        secrets_q = select(CharacterSecret).where(
+            CharacterSecret.character_id == character_id,
+            CharacterSecret.simulation_id == simulation_id,
+            CharacterSecret.revealed == False,
+        )
+        secrets = (await self.db.execute(secrets_q)).scalars().all()
+
+        # Relationships
+        rel_q = select(Relationship).where(
+            (Relationship.character_id_a == character_id) | (Relationship.character_id_b == character_id),
+        )
+        relationships = (await self.db.execute(rel_q)).scalars().all()
+        other_ids = []
+        for r in relationships:
+            other_id = r.character_id_b if r.character_id_a == character_id else r.character_id_a
+            other_ids.append(other_id)
+        related_characters = (await self.db.execute(
+            select(Character).where(Character.id.in_(other_ids))
+        )).scalars().all() if other_ids else []
+        characters_by_id = {c.id: c for c in related_characters}
+        characters_by_id[character.id] = character
+
+        # Active variables
+        var_q = select(VariableInjection).where(
+            VariableInjection.simulation_id == simulation_id,
+            VariableInjection.status == "applied",
+        )
+        variables = (await self.db.execute(var_q)).scalars().all()
+
+        return self._build_context(
+            character=character,
+            world_facts=all_facts,
+            recent_events=all_events,
+            knowledge=knowledge,
+            secrets=secrets,
+            relationships=relationships,
+            characters_by_id=characters_by_id,
+            variables=variables,
+        )
+
     async def build_all_character_contexts(
         self,
         simulation_id: uuid.UUID,
@@ -147,10 +191,93 @@ class ContextBuilder:
             Character.active == True,
         )
         characters = (await self.db.execute(chars_q)).scalars().all()
+        if not characters:
+            return {}
+
+        character_ids = [char.id for char in characters]
+        character_id_set = set(character_ids)
+
+        facts_q = (
+            select(WorldFact)
+            .join(World)
+            .where(
+                World.project_id == sim.project_id,
+                WorldFact.status.in_(["locked", "draft"]),
+            )
+        )
+        world_facts = (await self.db.execute(facts_q)).scalars().all()
+
+        events_q = (
+            select(SimulationEvent)
+            .where(SimulationEvent.simulation_id == simulation_id)
+            .order_by(SimulationEvent.tick.desc())
+            .limit(20)
+        )
+        recent_events = (await self.db.execute(events_q)).scalars().all()
+
+        knowledge_items = (await self.db.execute(
+            select(CharacterKnowledge).where(
+                CharacterKnowledge.character_id.in_(character_ids),
+                CharacterKnowledge.simulation_id == simulation_id,
+            )
+        )).scalars().all()
+        knowledge_by_character = defaultdict(list)
+        for item in knowledge_items:
+            knowledge_by_character[item.character_id].append(item)
+
+        secret_items = (await self.db.execute(
+            select(CharacterSecret).where(
+                CharacterSecret.character_id.in_(character_ids),
+                CharacterSecret.simulation_id == simulation_id,
+                CharacterSecret.revealed == False,
+            )
+        )).scalars().all()
+        secrets_by_character = defaultdict(list)
+        for item in secret_items:
+            secrets_by_character[item.character_id].append(item)
+
+        relationships = (await self.db.execute(
+            select(Relationship).where(
+                or_(
+                    Relationship.character_id_a.in_(character_ids),
+                    Relationship.character_id_b.in_(character_ids),
+                )
+            )
+        )).scalars().all()
+        relationships_by_character = defaultdict(list)
+        related_character_ids = set(character_ids)
+        for rel in relationships:
+            if rel.character_id_a in character_id_set:
+                relationships_by_character[rel.character_id_a].append(rel)
+                related_character_ids.add(rel.character_id_b)
+            if rel.character_id_b in character_id_set:
+                relationships_by_character[rel.character_id_b].append(rel)
+                related_character_ids.add(rel.character_id_a)
+
+        related_characters = (await self.db.execute(
+            select(Character).where(Character.id.in_(related_character_ids))
+        )).scalars().all()
+        characters_by_id = {char.id: char for char in related_characters}
+
+        variables = (await self.db.execute(
+            select(VariableInjection).where(
+                VariableInjection.simulation_id == simulation_id,
+                VariableInjection.status == "applied",
+            )
+        )).scalars().all()
 
         contexts = {}
         for char in characters:
-            contexts[str(char.id)] = await self.build_character_context(char.id, simulation_id)
+            contexts[str(char.id)] = self._build_context(
+                character=char,
+                world_facts=world_facts,
+                recent_events=recent_events,
+                knowledge=knowledge_by_character[char.id],
+                secrets=secrets_by_character[char.id],
+                relationships=relationships_by_character[char.id],
+                characters_by_id=characters_by_id,
+                variables=variables,
+            )
         return contexts
 
     async def build_world_judge_context(
@@ -159,7 +286,14 @@ class ContextBuilder:
     ) -> dict:
         """Build context for the world judge — includes ALL locked facts."""
         sim = await self.db.get(Simulation, simulation_id)
-        facts_q = select(WorldFact).where(WorldFact.status == "locked")
+        if not sim:
+            return {"locked_facts": [], "recent_events": []}
+
+        facts_q = (
+            select(WorldFact)
+            .join(World)
+            .where(World.project_id == sim.project_id, WorldFact.status == "locked")
+        )
         locked_facts = (await self.db.execute(facts_q)).scalars().all()
 
         recent_q = (

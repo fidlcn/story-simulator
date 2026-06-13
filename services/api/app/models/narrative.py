@@ -1,7 +1,7 @@
 """NarrativeLens, NarrativeBeat, Scene models."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, CheckConstraint, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -34,6 +34,7 @@ class NarrativeLens(Base):
             "preferred_narrative_structure IN ('three_act','five_act','hero_journey','kishotenketsu','tv_episode','custom')",
             name="ck_lens_narrative",
         ),
+        Index("ix_lenses_simulation_created", "simulation_id", "created_at"),
     )
 
     simulation = relationship("Simulation", back_populates="narrative_lens")
@@ -60,6 +61,8 @@ class NarrativeBeat(Base):
             "beat_type IN ('opening_image','inciting_incident','debate','first_turning_point','rising_pressure','midpoint','reversal','crisis','climax','resolution')",
             name="ck_beat_type",
         ),
+        Index("ix_beats_lens_order", "lens_id", "beat_order"),
+        Index("ix_beats_simulation", "simulation_id"),
     )
 
     lens = relationship("NarrativeLens", back_populates="beats")
@@ -68,6 +71,9 @@ class NarrativeBeat(Base):
 
 class Scene(Base):
     __tablename__ = "scenes"
+    __table_args__ = (
+        Index("ix_scenes_beat_order", "beat_id", "scene_order"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     beat_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("narrative_beats.id", ondelete="CASCADE"), nullable=False)
