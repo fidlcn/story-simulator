@@ -37,3 +37,19 @@
 - required_fixes 提供具体的修正建议
 - revised_candidate 修正了原事件的问题
 - approved 的事件通过了所有检查维度
+
+## 输出格式要求
+你必须为每个候选事件返回一条 review，且 **candidate_id 必须是 candidates 列表中对应事件的 id 字段值**（原样复制，不可为空、不可为 null、不可省略）。
+示例：
+```json
+{
+  "reviews": [
+    {
+      "candidate_id": "evt_abc123",
+      "approved": true,
+      "issues": [],
+      "required_fixes": []
+    }
+  ]
+}
+```

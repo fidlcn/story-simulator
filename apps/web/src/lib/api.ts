@@ -158,7 +158,7 @@ export const simulationApi = {
   resume: (id: string) =>
     request<{ status: string }>(`/api/simulations/${id}/resume`, { method: 'POST' }),
   getEvents: (id: string, pageSize?: number) =>
-    request<SimEvent[]>(`/api/simulations/${id}/events${pageSize ? `?page_size=${pageSize}` : ''}`),
+    request<{ total: number; events: SimEvent[] }>(`/api/simulations/${id}/events${pageSize ? `?page_size=${pageSize}` : ''}`),
   getTimeline: (id: string) => request<{ ticks: Array<{ tick: number; events: SimEvent[] }> }>(`/api/simulations/${id}/timeline`),
 }
 
@@ -282,11 +282,12 @@ export interface LLMSettings {
   model: string
   max_tokens: number
   temperature: number
+  language: string
 }
 
 export const settingsApi = {
   get: () => request<LLMSettings>('/api/settings'),
 
-  update: (data: Partial<Pick<LLMSettings, 'api_base' | 'model' | 'max_tokens' | 'temperature'> & { api_key?: string }>) =>
+  update: (data: Partial<Pick<LLMSettings, 'api_base' | 'model' | 'max_tokens' | 'temperature' | 'language'> & { api_key?: string }>) =>
     request<LLMSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
 }

@@ -13,6 +13,7 @@ class SettingsResponse(BaseModel):
     model: str
     max_tokens: int
     temperature: float
+    language: str
 
 
 class SettingsUpdate(BaseModel):
@@ -21,6 +22,7 @@ class SettingsUpdate(BaseModel):
     model: Optional[str] = None
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
+    language: Optional[str] = None
 
 
 def _mask_key(key: str) -> str:
@@ -38,6 +40,7 @@ async def get_settings():
         model=cfg.model,
         max_tokens=cfg.max_tokens,
         temperature=cfg.temperature,
+        language=cfg.language,
     )
 
 
@@ -50,4 +53,5 @@ async def update_settings(data: SettingsUpdate):
         model=cfg.model,
         max_tokens=cfg.max_tokens,
         temperature=cfg.temperature,
+        language=cfg.language,
     )

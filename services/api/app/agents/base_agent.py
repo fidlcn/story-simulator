@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.agents.llm_client import LLMClient
 from app.core.config import get_settings
+from app.core.runtime_config import get_runtime_config
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -69,6 +70,13 @@ class BaseAgent(ABC):
         user_prompt = self.build_user_prompt(context)
         output_schema = self.get_output_schema()
 
+        # Inject language instruction from runtime settings
+        lang = get_runtime_config().language
+        if lang == "zh":
+            system_prompt += "\n\n## 语言要求\n你必须使用中文输出所有文本内容（包括标题、摘要、描述、对话等）。JSON 的字段名保持英文，但字段值必须是中文。"
+        elif lang == "en":
+            system_prompt += "\n\n## Language Requirement\nYou MUST output all text content in English (including titles, summaries, descriptions, dialogue, etc.). JSON field names stay in English, but all field values must be in English."
+
         for attempt in range(self.max_retries):
             try:
                 result = await self.llm.call(
@@ -100,6 +108,13 @@ class BaseAgent(ABC):
         """Execute the agent and return raw text (for free-text content)."""
         system_prompt = self.get_system_prompt()
         user_prompt = self.build_user_prompt(context)
+
+        # Inject language instruction
+        lang = get_runtime_config().language
+        if lang == "zh":
+            system_prompt += "\n\n## 语言要求\n你必须使用中文输出所有文本内容。"
+        elif lang == "en":
+            system_prompt += "\n\n## Language Requirement\nYou MUST output all text content in English."
 
         for attempt in range(self.max_retries):
             try:

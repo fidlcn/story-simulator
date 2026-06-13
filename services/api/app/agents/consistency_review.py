@@ -6,7 +6,7 @@ from app.agents.llm_client import LLMClient
 
 
 class ConsistencyReviewItem(BaseModel):
-    candidate_id: str
+    candidate_id: str | None = None
     approved: bool
     issues: list[str] = []
     required_fixes: list[str] = []

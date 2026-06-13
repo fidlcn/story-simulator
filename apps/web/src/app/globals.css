@@ -1,11 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --sidebar-width: 240px;
+  --sidebar-width: 260px;
+  --color-void: #0B0F1A;
+  --color-panel: #111827;
+  --color-border: #1E293B;
+  --color-gold: #D4A853;
+  --color-stellar-blue: #60A5FA;
+  --color-steel-muted: #64748B;
+  --color-text: #E2E8F0;
+  --color-text-dim: #94A3B8;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1E293B #0B0F1A;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: #0B0F1A;
+}
+*::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-void text-gray-200 font-body antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(96, 165, 250, 0.04), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 0%, rgba(167, 139, 250, 0.03), transparent);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(212, 168, 83, 0.3);
+  color: #fff;
+}
+
+/* ── Glass Panel ── */
+@layer components {
+  .glass-panel {
+    @apply bg-void-200/80 backdrop-blur-xl border border-steel/50 rounded-xl shadow-glass;
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel transition-all duration-300;
+  }
+  .glass-panel-hover:hover {
+    @apply border-gold/30 shadow-glow-sm;
+  }
+
+  /* ── Gold Button ── */
+  .btn-gold {
+    @apply px-4 py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg
+           text-sm font-medium tracking-wide
+           transition-all duration-200 ease-out;
+  }
+  .btn-gold:hover {
+    @apply bg-gold/20 border-gold/50 shadow-glow-sm;
+  }
+  .btn-gold:active {
+    @apply bg-gold/25 scale-[0.98];
+  }
+  .btn-gold:disabled {
+    @apply opacity-40 cursor-not-allowed shadow-none;
+  }
+
+  /* ── Ghost Button ── */
+  .btn-ghost {
+    @apply px-3 py-1.5 text-steel-faint hover:text-gray-200
+           rounded-lg text-sm transition-colors duration-200;
+  }
+
+  /* ── Danger Button ── */
+  .btn-danger {
+    @apply px-3 py-1.5 text-stellar-red/70 hover:text-stellar-red
+           hover:bg-stellar-red/10 rounded-lg text-sm transition-all duration-200;
+  }
+
+  /* ── Section Title ── */
+  .section-title {
+    @apply text-sm font-semibold tracking-widest uppercase text-gold/70;
+    letter-spacing: 0.15em;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium tracking-wide;
+  }
+  .badge-gold {
+    @apply badge bg-gold/10 text-gold border border-gold/20;
+  }
+  .badge-blue {
+    @apply badge bg-stellar-blue/10 text-stellar-blue border border-stellar-blue/20;
+  }
+  .badge-green {
+    @apply badge bg-stellar-green/10 text-stellar-green border border-stellar-green/20;
+  }
+  .badge-red {
+    @apply badge bg-stellar-red/10 text-stellar-red border border-stellar-red/20;
+  }
+  .badge-purple {
+    @apply badge bg-stellar-purple/10 text-stellar-purple border border-stellar-purple/20;
+  }
+  .badge-orange {
+    @apply badge bg-stellar-orange/10 text-stellar-orange border border-stellar-orange/20;
+  }
+
+  /* ── Input ── */
+  .input-dark {
+    @apply w-full bg-void/60 border border-steel/50 rounded-lg px-3 py-2 text-sm text-gray-200
+           placeholder:text-steel-muted/50
+           focus:outline-none focus:border-gold/40 focus:ring-1 focus:ring-gold/20
+           transition-all duration-200;
+  }
+
+  /* ── Select ── */
+  .select-dark {
+    @apply input-dark appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* ── Stagger children animation ── */
+  .stagger-children > * {
+    opacity: 0;
+    animation: slide-up 0.4s ease-out forwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+  .stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+  .stagger-children > *:nth-child(8) { animation-delay: 0.40s; }
+  .stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+  .stagger-children > *:nth-child(10) { animation-delay: 0.50s; }
+}
+
+/* ── Star field particles ── */
+.star-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.star-field::before,
+.star-field::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15), transparent),
+    radial-gradient(1px 1px at 25% 55%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1.5px 1.5px at 40% 15%, rgba(255,255,255,0.12), transparent),
+    radial-gradient(1px 1px at 55% 70%, rgba(255,255,255,0.08), transparent),
+    radial-gradient(1px 1px at 70% 35%, rgba(255,255,255,0.12), transparent),
+    radial-gradient(1.5px 1.5px at 85% 60%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.08), transparent),
+    radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 95% 25%, rgba(255,255,255,0.06), transparent),
+    radial-gradient(1px 1px at 35% 45%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 80% 80%, rgba(255,255,255,0.08), transparent),
+    radial-gradient(1.5px 1.5px at 5% 50%, rgba(212,168,83,0.08), transparent),
+    radial-gradient(1px 1px at 45% 30%, rgba(96,165,250,0.06), transparent),
+    radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 30% 75%, rgba(167,139,250,0.06), transparent);
+}
+.star-field::before {
+  animation: twinkle-field 8s ease-in-out infinite;
+}
+.star-field::after {
+  animation: twinkle-field 12s ease-in-out infinite reverse;
+}
+
+@keyframes twinkle-field {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }

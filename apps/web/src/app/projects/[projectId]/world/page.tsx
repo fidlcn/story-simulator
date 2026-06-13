@@ -4,21 +4,35 @@ import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { worldApi } from '@/lib/api'
+import { useT } from '@/lib/i18n'
+import {
+  Globe2, Lock, FileEdit, Eye, Plus, X, Check, Pencil,
+  MapPin, Landmark, Coins, Cpu, Sparkles, AlertTriangle,
+} from 'lucide-react'
 
-const WORLD_FIELDS = [
-  { key: 'era', label: '时代', placeholder: '例如：蒸汽朋克时代、中世纪、2157年' },
-  { key: 'geography', label: '地理', placeholder: '描述主要地理环境' },
-  { key: 'political_structure', label: '政治结构', placeholder: '例如：执政官议会制、封建制' },
-  { key: 'economy', label: '经济', placeholder: '经济运行方式' },
-  { key: 'technology_level', label: '技术水平', placeholder: '例如：中世纪、工业革命、星际航行' },
-  { key: 'magic_or_power_system', label: '魔法/超自然', placeholder: '如果有，描述超自然体系' },
-  { key: 'current_instability', label: '当前不稳定因素', placeholder: '推动故事的核心矛盾' },
-]
+function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+    </svg>
+  )
+}
 
 export default function WorldEditor() {
   const params = useParams()
   const projectId = params.projectId as string
   const queryClient = useQueryClient()
+  const { t, lang } = useT()
+
+  const WORLD_FIELDS = [
+    { key: 'era', label: t('world.era'), placeholder: lang === 'zh' ? '例如：蒸汽朋克时代、中世纪、2157年' : 'e.g. Steampunk era, Middle Ages, 2157', icon: ClockIcon },
+    { key: 'geography', label: t('world.geography'), placeholder: lang === 'zh' ? '描述主要地理环境' : 'Describe the main geography', icon: MapPin },
+    { key: 'political_structure', label: t('world.politics'), placeholder: lang === 'zh' ? '例如：执政官议会制、封建制' : 'e.g. Consular parliament, Feudalism', icon: Landmark },
+    { key: 'economy', label: t('world.economy'), placeholder: lang === 'zh' ? '经济运行方式' : 'How the economy works', icon: Coins },
+    { key: 'technology_level', label: t('world.tech'), placeholder: lang === 'zh' ? '例如：中世纪、工业革命、星际航行' : 'e.g. Medieval, Industrial Revolution, Interstellar', icon: Cpu },
+    { key: 'magic_or_power_system', label: t('world.magic'), placeholder: lang === 'zh' ? '如果有，描述超自然体系' : 'If any, describe the supernatural system', icon: Sparkles },
+    { key: 'current_instability', label: t('world.instability'), placeholder: lang === 'zh' ? '推动故事的核心矛盾' : 'Core conflict driving the story', icon: AlertTriangle },
+  ] as const
 
   const { data: world, isLoading } = useQuery({
     queryKey: ['world', projectId],
@@ -50,7 +64,13 @@ export default function WorldEditor() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['world', projectId] }),
   })
 
-  if (isLoading) return <div className="p-8 text-gray-500">加载中...</div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="w-6 h-6 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const facts = world?.facts || []
   const lockedFacts = facts.filter(f => f.status === 'locked')
@@ -67,44 +87,65 @@ export default function WorldEditor() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">世界设定</h1>
+    <div className="p-8 max-w-5xl animate-fade-in">
+      {/* Page Title */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-1">
+          <Globe2 className="w-4 h-4 text-gold/50" />
+          <span className="section-title">World Building</span>
+        </div>
+        <h1 className="text-2xl font-display font-semibold text-gray-100 mt-2">{t('world.label')}</h1>
       </div>
 
-      {/* World fields - editable */}
-      <div className="bg-white rounded-xl border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">基本设定</h2>
-        <p className="text-xs text-gray-400 mb-4">点击字段可编辑，回车保存</p>
+      {/* World fields */}
+      <div className="glass-panel p-6 mb-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="section-title text-[11px]">{t('world.basicSettings')}</h2>
+          <span className="text-[11px] text-steel-muted/50">{t('world.clickToEdit')}</span>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {WORLD_FIELDS.map(({ key, label, placeholder }) => {
+          {WORLD_FIELDS.map(({ key, label, placeholder, icon: Icon }) => {
             const value = (world as any)?.[key]
             const isEditing = editingField === key
             return (
-              <div key={key}>
-                <label className="block text-sm font-medium text-gray-500 mb-1">{label}</label>
+              <div key={key} className="group">
+                <label className="flex items-center gap-1.5 text-xs text-steel-muted mb-1.5">
+                  <Icon className="w-3 h-3" />
+                  {label}
+                </label>
                 {isEditing ? (
                   <div className="flex gap-2">
                     <input
                       value={editValue}
                       onChange={e => setEditValue(e.target.value)}
                       placeholder={placeholder}
-                      className="flex-1 border border-brand-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-200 focus:outline-none"
+                      className="input-dark flex-1 border-gold/30"
                       autoFocus
                       onKeyDown={e => {
                         if (e.key === 'Enter') saveEdit(key)
                         if (e.key === 'Escape') setEditingField(null)
                       }}
                     />
-                    <button onClick={() => saveEdit(key)} className="px-3 py-2 bg-brand-600 text-white rounded-lg text-xs">保存</button>
-                    <button onClick={() => setEditingField(null)} className="px-3 py-2 border rounded-lg text-xs">取消</button>
+                    <button onClick={() => saveEdit(key)} className="btn-gold px-2.5 py-1.5">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setEditingField(null)} className="btn-ghost px-2.5 py-1.5">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ) : (
                   <div
                     onClick={() => startEdit(key, value)}
-                    className="min-h-[38px] border border-dashed border-gray-200 rounded-lg px-3 py-2 text-sm cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition-colors"
+                    className="min-h-[38px] border border-dashed border-steel/30 rounded-lg px-3 py-2 text-sm cursor-pointer hover:border-gold/25 hover:bg-gold/[0.02] transition-all duration-200 flex items-center gap-2"
                   >
-                    {value ? <span className="text-gray-900">{value}</span> : <span className="text-gray-300">{placeholder}</span>}
+                    {value ? (
+                      <>
+                        <span className="text-gray-200">{value}</span>
+                        <Pencil className="w-3 h-3 text-steel-muted/0 group-hover:text-steel-muted/50 transition-colors ml-auto shrink-0" />
+                      </>
+                    ) : (
+                      <span className="text-steel-muted/30 italic">{placeholder}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -113,43 +154,63 @@ export default function WorldEditor() {
         </div>
       </div>
 
-      {/* Social rules & cultural norms */}
-      <div className="bg-white rounded-xl border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-2">关于"草稿事实"</h2>
-        <p className="text-sm text-gray-600">
-          <strong>草稿事实</strong>是你对世界的初步设定，可以随时修改。<strong>锁定</strong>后变成不可变的规则，模拟引擎和所有 Agent 都必须遵守。
-          建议先写草稿，确认无误后再锁定。
-        </p>
+      {/* Draft facts explanation */}
+      <div className="glass-panel p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-7 h-7 rounded bg-stellar-blue/10 flex items-center justify-center shrink-0 mt-0.5">
+            <FileEdit className="w-3.5 h-3.5 text-stellar-blue" />
+          </div>
+          <div className="text-sm">
+            <p className="text-steel-faint">
+              {t('world.draftFactDesc')}
+            </p>
+            <p className="text-steel-muted text-xs mt-1">{t('world.draftFactTip')}</p>
+          </div>
+        </div>
       </div>
 
       {/* Facts panels */}
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {/* Locked facts */}
         {lockedFacts.length > 0 && (
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">🔒 已锁定事实（不可修改，模拟必须遵守）</h3>
+          <div className="glass-panel p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="w-3.5 h-3.5 text-stellar-green" />
+              <h3 className="section-title text-[11px]">{t('world.lockedFacts')}</h3>
+              <span className="text-[10px] text-steel-muted/50 ml-1">{t('world.lockedFacts.desc')}</span>
+            </div>
             <ul className="space-y-2">
               {lockedFacts.map(f => (
-                <li key={f.id} className="text-sm bg-green-50 rounded-lg px-4 py-3 border border-green-100">
-                  <span className="text-gray-900">{f.text}</span>
-                  <span className="ml-2 text-xs text-green-600">{f.scope} · {f.source}</span>
+                <li key={f.id} className="flex items-start gap-3 px-4 py-3 rounded-lg bg-stellar-green/[0.04] border border-stellar-green/10">
+                  <div className="w-1 h-full min-h-[16px] rounded-full bg-stellar-green/30 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-200">{f.text}</p>
+                    <span className="text-[10px] text-stellar-green/50 mt-0.5 block">{f.scope} · {f.source}</span>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="bg-white rounded-xl border p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">📝 草稿事实（可编辑，确认后锁定）</h3>
+        {/* Draft facts */}
+        <div className="glass-panel p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <FileEdit className="w-3.5 h-3.5 text-stellar-blue" />
+            <h3 className="section-title text-[11px]">{t('world.draftFacts')}</h3>
+            <span className="text-[10px] text-steel-muted/50 ml-1">{t('world.draftFacts.desc')}</span>
+          </div>
           {draftFacts.length > 0 && (
             <ul className="space-y-2 mb-4">
               {draftFacts.map(f => (
-                <li key={f.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-4 py-3">
-                  <span>{f.text}</span>
+                <li key={f.id} className="flex items-center justify-between px-4 py-3 rounded-lg bg-void/40 border border-steel/20">
+                  <span className="text-sm text-steel-faint">{f.text}</span>
                   <button
                     onClick={() => lockFactMutation.mutate(f.id)}
-                    className="text-xs px-3 py-1 bg-brand-100 text-brand-700 rounded hover:bg-brand-200"
+                    className="badge-blue text-[10px] hover:bg-stellar-blue/20 transition-colors cursor-pointer"
                   >
-                    锁定
+                    <Lock className="w-2.5 h-2.5 mr-1" />
+                    {t('world.lock')}
                   </button>
                 </li>
               ))}
@@ -159,27 +220,34 @@ export default function WorldEditor() {
             <input
               value={newFact}
               onChange={e => setNewFact(e.target.value)}
-              placeholder="输入新世界事实，例如：记忆提取为城市法律和金融系统供能"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm"
+              placeholder={lang === 'zh' ? '输入新世界事实，例如：记忆提取为城市法律和金融系统供能' : 'Enter a new world fact, e.g.: Memory extraction powers the city\'s legal and financial systems'}
+              className="input-dark flex-1"
               onKeyDown={e => e.key === 'Enter' && newFact && addFactMutation.mutate()}
             />
             <button
               onClick={() => addFactMutation.mutate()}
               disabled={!newFact}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm disabled:opacity-50"
+              className="btn-gold flex items-center gap-1.5"
             >
-              添加
+              <Plus className="w-3.5 h-3.5" />
+              {t('world.addFact')}
             </button>
           </div>
         </div>
 
+        {/* Hidden facts */}
         {hiddenFacts.length > 0 && (
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">👁 隐藏事实（客观存在但角色不知道）</h3>
+          <div className="glass-panel p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Eye className="w-3.5 h-3.5 text-stellar-purple" />
+              <h3 className="section-title text-[11px]">{t('world.hiddenFacts')}</h3>
+              <span className="text-[10px] text-steel-muted/50 ml-1">{t('world.hiddenFacts.desc')}</span>
+            </div>
             <ul className="space-y-2">
               {hiddenFacts.map(f => (
-                <li key={f.id} className="text-sm bg-gray-50 rounded-lg px-4 py-3 text-gray-600">
-                  {f.text} <span className="text-xs text-gray-400 ml-2">({f.scope})</span>
+                <li key={f.id} className="px-4 py-3 rounded-lg bg-stellar-purple/[0.03] border border-stellar-purple/10">
+                  <p className="text-sm text-steel-muted">{f.text}</p>
+                  <span className="text-[10px] text-stellar-purple/40">({f.scope})</span>
                 </li>
               ))}
             </ul>

@@ -3,8 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { settingsApi, type LLMSettings } from '@/lib/api'
+import { X, Save, CheckCircle, AlertCircle, Key, Globe, Cpu, Gauge, Thermometer } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 
 export default function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useT()
   const queryClient = useQueryClient()
 
   const { data: settings } = useQuery({
@@ -18,6 +21,7 @@ export default function SettingsDialog({ open, onClose }: { open: boolean; onClo
   const [model, setModel] = useState('')
   const [maxTokens, setMaxTokens] = useState(4096)
   const [temperature, setTemperature] = useState(0.7)
+  const [language, setLanguage] = useState('zh')
 
   useEffect(() => {
     if (settings) {
@@ -25,7 +29,8 @@ export default function SettingsDialog({ open, onClose }: { open: boolean; onClo
       setModel(settings.model)
       setMaxTokens(settings.max_tokens)
       setTemperature(settings.temperature)
-      setApiKey('') // Always start empty — masked value is not the real key
+      setLanguage(settings.language || 'zh')
+      setApiKey('')
     }
   }, [settings])
 
@@ -36,6 +41,7 @@ export default function SettingsDialog({ open, onClose }: { open: boolean; onClo
       model,
       max_tokens: maxTokens,
       temperature,
+      language,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
@@ -46,79 +52,144 @@ export default function SettingsDialog({ open, onClose }: { open: boolean; onClo
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">⚙️ 模型设置</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Panel */}
+      <div
+        className="relative w-full max-w-lg bg-void-200/95 backdrop-blur-xl border border-steel/50 rounded-2xl shadow-glass animate-fade-in"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-steel/30">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
+              <Cpu className="w-4 h-4 text-gold" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-100">{t('settings.title')}</h2>
+              <p className="text-[11px] text-steel-muted">{t('settings.desc')}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-steel-muted hover:text-gray-300 hover:bg-white/5 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {saveMutation.isSuccess && (
-          <div className="mb-4 p-2.5 rounded-lg bg-green-50 text-sm text-green-700">
-            ✅ 设置已保存，新设置将在下次 AI 调用时生效
-          </div>
-        )}
-        {saveMutation.error && (
-          <div className="mb-4 p-2.5 rounded-lg bg-red-50 text-sm text-red-600">
-            {(saveMutation.error as Error).message}
-          </div>
-        )}
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          {/* Status Message */}
+          {saveMutation.isSuccess && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-stellar-green/5 border border-stellar-green/20 animate-slide-up">
+              <CheckCircle className="w-4 h-4 text-stellar-green shrink-0" />
+              <span className="text-sm text-stellar-green">{t('settings.saved')}</span>
+            </div>
+          )}
+          {saveMutation.error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-stellar-red/5 border border-stellar-red/20 animate-slide-up">
+              <AlertCircle className="w-4 h-4 text-stellar-red shrink-0" />
+              <span className="text-sm text-stellar-red">{(saveMutation.error as Error).message}</span>
+            </div>
+          )}
 
-        <div className="space-y-4">
           {/* API Key */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-steel-faint">
+              <Key className="w-3.5 h-3.5" /> API Key
+            </label>
             <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
               placeholder={settings?.api_key || '未设置'}
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
-            <p className="text-xs text-gray-400 mt-1">留空则保持当前 Key 不变</p>
+              className="input-dark" />
+            <p className="text-[11px] text-steel-muted/50 pl-1">{t('settings.apiKey.tip')}</p>
           </div>
 
           {/* API Base */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-steel-faint">
+              <Globe className="w-3.5 h-3.5" /> API Base URL
+            </label>
             <input type="text" value={apiBase} onChange={e => setApiBase(e.target.value)}
-              placeholder="https://api.openai.com/v1"
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
-            <p className="text-xs text-gray-400 mt-1">留空使用 OpenAI 官方；DeepSeek 填 https://api.deepseek.com</p>
+              placeholder="https://api.openai.com"
+              className="input-dark" />
+            <p className="text-[11px] text-steel-muted/50 pl-1">{t('settings.apiBase.tip')}</p>
           </div>
 
           {/* Model */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">模型</label>
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-steel-faint">
+              <Cpu className="w-3.5 h-3.5" /> 模型
+            </label>
             <input type="text" value={model} onChange={e => setModel(e.target.value)}
               placeholder="gpt-4o-mini"
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
+              className="input-dark" />
           </div>
 
           {/* Max Tokens + Temperature */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Tokens</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-sm text-steel-faint">
+                <Gauge className="w-3.5 h-3.5" /> Max Tokens
+              </label>
               <input type="number" value={maxTokens} onChange={e => setMaxTokens(Number(e.target.value))}
                 min={256} max={65536}
-                className="w-full border rounded-lg px-3 py-2 text-sm" />
+                className="input-dark" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temperature <span className="text-gray-400 font-normal">{temperature}</span>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-sm text-steel-faint">
+                <Thermometer className="w-3.5 h-3.5" /> Temperature
+                <span className="text-gold/60 ml-auto font-mono text-xs">{temperature.toFixed(1)}</span>
               </label>
-              <input type="range" value={temperature} onChange={e => setTemperature(Number(e.target.value))}
-                min={0} max={2} step={0.1}
-                className="w-full mt-2 accent-brand-600" />
+              <div className="pt-2">
+                <input type="range" value={temperature} onChange={e => setTemperature(Number(e.target.value))}
+                  min={0} max={2} step={0.1}
+                  className="w-full accent-gold h-1.5" />
+              </div>
             </div>
+          </div>
+
+          {/* Output Language */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-steel-faint">
+              <Globe className="w-3.5 h-3.5" /> AI 输出语言
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setLanguage('zh')}
+                className={`flex-1 py-2 rounded-lg text-xs border transition-all duration-200 ${
+                  language === 'zh'
+                    ? 'bg-gold/10 border-gold/30 text-gold'
+                    : 'border-steel/30 text-steel-muted hover:text-steel-faint'
+                }`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`flex-1 py-2 rounded-lg text-xs border transition-all duration-200 ${
+                  language === 'en'
+                    ? 'bg-gold/10 border-gold/30 text-gold'
+                    : 'border-steel/30 text-steel-muted hover:text-steel-faint'
+                }`}
+              >
+                English
+              </button>
+            </div>
+            <p className="text-[11px] text-steel-muted/50 pl-1">{t('settings.language.tip')}</p>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        {/* Footer */}
+        <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-            关闭
+            className="flex-1 px-4 py-2.5 border border-steel/50 rounded-lg text-sm text-steel-faint hover:bg-white/[0.03] transition-colors">
+            {t('common.close')}
           </button>
           <button onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm disabled:opacity-50">
-            {saveMutation.isPending ? '保存中...' : '保存设置'}
+            className="flex-1 btn-gold flex items-center justify-center gap-2 py-2.5">
+            <Save className="w-3.5 h-3.5" />
+            {saveMutation.isPending ? t('settings.saving') : t('settings.saveBtn')}
           </button>
         </div>
       </div>

@@ -39,3 +39,23 @@
 - causes 引用了具体的角色意图
 - 事件的 dramatic_potential 评估合理
 - 状态变更与事件因果关系一致
+
+## 输出格式要求
+每个候选事件 **必须包含 candidate_id 字段**，值为唯一的标识符（例如 `"c1"`, `"c2"` 等）。不可为空、不可为 null、不可省略。
+示例：
+```json
+{
+  "candidates": [
+    {
+      "candidate_id": "c1",
+      "title": "...",
+      "summary": "...",
+      "event_type": "conflict",
+      "participants": ["角色A", "角色B"],
+      "causes": ["角色A的意图: ..."],
+      "likely_effects": ["..."],
+      "dramatic_potential": 75
+    }
+  ]
+}
+```

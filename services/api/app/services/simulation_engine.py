@@ -106,14 +106,22 @@ class SimulationEngine:
 
             # Phase 6: Select approved events
             approved = []
-            for review in reviews.get("reviews", []):
+            review_list = reviews.get("reviews", [])
+            for idx, review in enumerate(review_list):
                 if review.get("approved", False):
-                    # Find matching candidate
+                    # Find matching candidate by candidate_id
                     cid = review.get("candidate_id")
-                    for c in candidate_list:
-                        if c.get("candidate_id") == cid or cid is None:
-                            approved.append(c)
-                            break
+                    matched = None
+                    if cid:
+                        for c in candidate_list:
+                            if c.get("candidate_id") == cid:
+                                matched = c
+                                break
+                    # Fallback: match by position if candidate_id is missing
+                    if not matched and idx < len(candidate_list):
+                        matched = candidate_list[idx]
+                    if matched:
+                        approved.append(matched)
                 elif review.get("revised_candidate"):
                     approved.append(review["revised_candidate"])
 

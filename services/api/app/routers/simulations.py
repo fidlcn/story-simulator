@@ -9,7 +9,7 @@ from app.models.project import Project
 from app.models.simulation import Simulation, SimulationEvent
 from app.schemas.simulation import (
     SimulationCreate, SimulationResponse, EventResponse,
-    EventFilters, ContinuousRunConfig,
+    EventListResponse, EventFilters, ContinuousRunConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ async def branch_simulation(
     return branch
 
 
-@router.get("/simulations/{simulation_id}/events", response_model=list[EventResponse])
+@router.get("/simulations/{simulation_id}/events", response_model=EventListResponse)
 async def list_events(
     simulation_id: uuid.UUID,
     tick: int | None = None,
@@ -158,14 +158,22 @@ async def list_events(
     page_size: int = 20,
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(SimulationEvent).where(SimulationEvent.simulation_id == simulation_id)
+    base_q = select(SimulationEvent).where(SimulationEvent.simulation_id == simulation_id)
     if tick is not None:
-        q = q.where(SimulationEvent.tick == tick)
+        base_q = base_q.where(SimulationEvent.tick == tick)
     if event_type:
-        q = q.where(SimulationEvent.event_type == event_type)
-    q = q.order_by(SimulationEvent.tick.desc(), SimulationEvent.created_at.desc())
+        base_q = base_q.where(SimulationEvent.event_type == event_type)
+
+    # Count total
+    from sqlalchemy import func
+    count_q = select(func.count()).select_from(base_q.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    # Fetch page
+    q = base_q.order_by(SimulationEvent.tick.desc(), SimulationEvent.created_at.desc())
     q = q.offset((page - 1) * page_size).limit(page_size)
-    return (await db.execute(q)).scalars().all()
+    events = (await db.execute(q)).scalars().all()
+    return EventListResponse(total=total, events=events)
 
 
 @router.get("/simulations/{simulation_id}/timeline")

@@ -16,6 +16,7 @@ class LLMSettings(BaseModel):
     model: str
     max_tokens: int
     temperature: float
+    language: str = "zh"
 
 
 def _defaults() -> LLMSettings:

@@ -57,6 +57,11 @@ class EventFilters(BaseModel):
     page_size: int = 20
 
 
+class EventListResponse(BaseModel):
+    total: int
+    events: list[EventResponse]
+
+
 class TimelineResponse(BaseModel):
     ticks: list[dict]
 

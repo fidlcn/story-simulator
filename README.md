@@ -11,7 +11,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![OpenAI Compatible](https://img.shields.io/badge/LLM-OpenAI_Compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
 
-[English](#) · [设计文档](doc/) · [API 文档](http://localhost:8000/api/docs)
+[English](./README_EN.md) · [设计文档](doc/) · [API 文档](http://localhost:8000/api/docs)
 
 </div>
 
@@ -42,6 +42,10 @@
 ### 📤 导出
 - Markdown / Fountain 剧本格式导出
 - 选择叙事视角后一键生成，浏览器直接下载
+
+### 🌐 多语言界面
+- 支持中文 / English 界面切换
+- AI 输出语言可独立配置
 
 ### ⚙️ 运行时模型配置
 - 网页端直接修改 API Key、Base URL、模型名、参数
@@ -128,7 +132,9 @@ agent-real-world/
 │       │   └── export/                # 导出
 │       ├── components/
 │       │   └── SettingsDialog.tsx     # 模型设置弹窗
-│       └── lib/api.ts                 # API 客户端
+│       └── lib/
+│           ├── api.ts                 # API 客户端
+│           └── i18n.tsx               # 国际化
 │
 ├── services/api/                      # FastAPI 后端
 │   └── app/
