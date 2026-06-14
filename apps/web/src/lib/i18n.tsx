@@ -180,6 +180,11 @@ const translations: Record<string, Record<string, string>> = {
   'narr.deleteConfirm': { zh: '删除此叙事及所有节拍/场景？', en: 'Delete this narrative and all beats/scenes?' },
   'narr.nEvents': { zh: '{n} 个事件', en: '{n} events' },
   'narr.unnamed': { zh: '未命名', en: 'Unnamed' },
+  'narr.coverage.title': { zh: '节拍已生成', en: 'Beats generated' },
+  'narr.coverage.selPartial': { zh: '从你选的 {n} 个事件中引用了 {m} 个，其余 {x} 个未进入节拍（AI 按主角弧光筛选）', en: 'Used {m} of your {n} selected events; {x} left out (not central to the protagonist arc)' },
+  'narr.coverage.selFull': { zh: '你选的 {n} 个事件已全部进入节拍', en: 'All {n} of your selected events made it into the beats' },
+  'narr.coverage.allPartial': { zh: '从全部 {k} 个模拟事件中提炼了 {m} 个，其余 {x} 个未进入节拍（AI 按主角弧光筛选）', en: 'Distilled {m} from {k} simulation events; {x} left out (not central to the protagonist arc)' },
+  'narr.coverage.allFull': { zh: '全部 {k} 个事件已进入节拍', en: 'All {k} simulation events made it into the beats' },
 
   // ── Export ──
   'export.label': { zh: '导出', en: 'Archive' },

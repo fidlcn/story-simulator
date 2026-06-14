@@ -271,6 +271,18 @@ function NarrativeDetail({ lens, characters, simEvents, onDelete, isDeleting }: 
   const structLabel = STRUCTURE_OPTIONS.find(o => o.value === lens.structure)?.label || lens.structure
   const narrLabel = NARRATIVE_STRUCT_OPTIONS.find(o => o.value === lens.preferred_narrative_structure)?.label || lens.preferred_narrative_structure
 
+  /* 节拍事件覆盖统计 —— 解释「选择事件」的真实语义：节拍是筛选产物，所选/全部事件未必全部进入节拍 */
+  const simEventIds = new Set(simEvents.map(e => e.id))
+  const referencedEventIds = new Set(
+    beats.flatMap(b => b.related_event_ids || []).filter(id => simEventIds.has(id))
+  )
+  const coveredM = referencedEventIds.size
+  const totalK = simEvents.length
+  // 选择语境仅在「选择」模式且引用事件全部落在所选范围内时成立，否则降级到「全部事件」基准
+  const selectionIds = (!useAllEvents && selectedEventIds.size > 0) ? selectedEventIds : null
+  const useSelectionCtx = !!selectionIds && Array.from(referencedEventIds).every(id => selectionIds!.has(id))
+  const baseN = useSelectionCtx ? selectionIds!.size : totalK
+
   return (
     <div className="p-6 space-y-5">
       {/* Lens Header */}
@@ -383,6 +395,32 @@ function NarrativeDetail({ lens, characters, simEvents, onDelete, isDeleting }: 
         </div>
       ) : (
         <div className="space-y-0">
+          {/* Beat coverage — 解释节拍是筛选产物，所选/全部事件未必全部进入节拍 */}
+          <div className="glass-panel p-3 mb-4 flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 text-gold/70 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-gray-200">
+                {t('narr.coverage.title')}
+                <span className="text-gold/90 font-medium ml-1.5">
+                  {coveredM}<span className="text-steel-muted/60 mx-0.5">/</span>{baseN}
+                </span>
+              </div>
+              <div className="text-[10px] text-steel-muted mt-0.5 leading-relaxed">
+                {useSelectionCtx
+                  ? (coveredM < baseN
+                      ? t('narr.coverage.selPartial', { n: baseN, m: coveredM, x: baseN - coveredM })
+                      : t('narr.coverage.selFull', { n: baseN }))
+                  : (coveredM < totalK
+                      ? t('narr.coverage.allPartial', { k: totalK, m: coveredM, x: totalK - coveredM })
+                      : t('narr.coverage.allFull', { k: totalK }))}
+              </div>
+            </div>
+            <div className="shrink-0 w-16 h-1 bg-steel/20 rounded-full overflow-hidden">
+              <div className="h-full bg-gold/60 rounded-full transition-all duration-500"
+                style={{ width: `${baseN > 0 ? Math.round(coveredM / baseN * 100) : 0}%` }} />
+            </div>
+          </div>
+
           {/* Beat flow bar (horizontal overview) */}
           <div className="flex items-center gap-1 mb-5 overflow-x-auto pb-1">
             {beats.map(b => {
